@@ -1,0 +1,98 @@
+import { Heart, ShoppingBag } from "lucide-react";
+import { useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
+import type { Product } from "@/lib/products";
+import { useCart, useWishlist, hasSizes, SIZES } from "@/lib/store";
+import { toast } from "sonner";
+
+export function ProductCard({ product }: { product: Product }) {
+  const { add } = useCart();
+  const { has, toggle } = useWishlist();
+  const navigate = useNavigate();
+  const wished = has(product.id);
+  const off = Math.round(((product.mrp - product.price) / product.mrp) * 100);
+  const needsSize = hasSizes(product.subcategory);
+  const [size, setSize] = useState<string | null>(null);
+
+  const onAdd = () => {
+    if (needsSize && !size) {
+      toast.error("Please select a size");
+      return;
+    }
+    add(product.id, size ?? undefined);
+    toast.success(`Added to bag${size ? ` (Size ${size})` : ""}`);
+  };
+
+  const onBuyNow = () => {
+    if (needsSize && !size) {
+      toast.error("Please select a size");
+      return;
+    }
+    add(product.id, size ?? undefined);
+    navigate({ to: "/cart" });
+  };
+
+  return (
+    <div className="group bg-card rounded-lg overflow-hidden border border-border/50 transition-all duration-300 hover:shadow-[var(--shadow-hover)] hover:-translate-y-1">
+      <div className="relative aspect-[3/4] overflow-hidden bg-muted">
+        <img
+          src={product.image}
+          alt={product.name}
+          loading="lazy"
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+        />
+        <button
+          onClick={() => {
+            toggle(product.id);
+            toast(wished ? "Removed from wishlist" : "Added to wishlist ❤️");
+          }}
+          aria-label="wishlist"
+          className="absolute top-3 right-3 w-9 h-9 rounded-full bg-card/95 backdrop-blur flex items-center justify-center shadow-md hover:scale-110 transition-transform"
+        >
+          <Heart className={`w-4 h-4 ${wished ? "fill-primary text-primary" : "text-foreground"}`} />
+        </button>
+        <div className="absolute bottom-0 inset-x-0 bg-primary text-primary-foreground text-sm font-semibold translate-y-full group-hover:translate-y-0 transition-transform flex gap-2 p-2">
+          <button
+            onClick={onAdd}
+            className="flex-1 py-1.5 flex items-center justify-center gap-2 hover:opacity-90"
+          >
+            <ShoppingBag className="w-4 h-4" /> Add to Bag
+          </button>
+          <button
+            onClick={onBuyNow}
+            className="flex-1 py-1.5 bg-primary-foreground/20 hover:bg-primary-foreground/30 flex items-center justify-center gap-2 rounded"
+          >
+            Buy Now
+          </button>
+        </div>
+
+      </div>
+      <div className="p-3 space-y-1">
+        <h3 className="font-bold text-sm truncate">{product.brand}</h3>
+        <p className="text-xs text-muted-foreground truncate">{product.name}</p>
+        <div className="flex items-baseline gap-2 pt-1">
+          <span className="font-bold text-sm">₹{product.price}</span>
+          <span className="text-xs text-muted-foreground line-through">₹{product.mrp}</span>
+          <span className="text-xs font-semibold" style={{ color: "var(--discount)" }}>({off}% OFF)</span>
+        </div>
+        {needsSize && (
+          <div className="flex items-center gap-1 pt-2">
+            {SIZES.map((s) => (
+              <button
+                key={s}
+                onClick={(e) => { e.stopPropagation(); setSize(s); }}
+                className={`text-[11px] font-semibold w-7 h-7 rounded-full border transition ${
+                  size === s
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background border-border hover:border-primary"
+                }`}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
